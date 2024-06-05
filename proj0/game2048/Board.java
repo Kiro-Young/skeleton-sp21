@@ -51,11 +51,6 @@ public class Board implements Iterable<Tile> {
         return values.length;
     }
 
-    /** Shifts the view of the Board. */
-    public void startViewingFrom(Side s) {
-        viewPerspective = s;
-    }
-
     /** Return the current Tile at (COL, ROW), when sitting with the board
      *  oriented so that SIDE is at the top (farthest) from you. */
     private Tile vtile(int col, int row, Side side) {

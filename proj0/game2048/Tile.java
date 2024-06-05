@@ -5,6 +5,15 @@ package game2048;
  */
 public class Tile {
 
+    /** My value. */
+    private final int value;
+
+    /** My last position on the board. */
+    private final int row, col;
+
+    /** Successor tile: one I am moved to or merged with. */
+    private Tile next;
+
     /** A new tile with VALUE as its value at (ROW, COL).  This
      *  constructor is private, so all tiles are created by the
      *  factory methods create, move, and merge. */
@@ -72,12 +81,4 @@ public class Tile {
         return String.format("%d@(%d, %d)", value(), col(), row());
     }
 
-    /** My value. */
-    private final int value;
-
-    /** My last position on the board. */
-    private final int row, col;
-
-    /** Successor tile: one I am moved to or merged with. */
-    private Tile next;
 }

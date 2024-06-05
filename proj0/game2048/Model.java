@@ -27,7 +27,7 @@ public class Model extends Observable {
     public static final int MAX_PIECE = 2048;
 
     /** A new 2048 game on a board of size SIZE with no pieces
-     *  and score 0.有点懵，棋盘大小应该固定不变才对吧，那为什么每次要传参呢？ */
+     *  and score 0. */
     public Model(int size) {
         board = new Board(size);
         score = maxScore = 0;
@@ -58,6 +58,85 @@ public class Model extends Observable {
     public int size() {
         return board.size();
     }
+
+    /** Checks if the game is over and sets the gameOver variable
+     *  appropriately.
+     */
+    private void checkGameOver() {
+        gameOver = checkGameOver(board);
+    }
+
+    /** Determine whether game is over. */
+    private static boolean checkGameOver(Board b) {
+        return maxTileExists(b) || !atLeastOneMoveExists(b);
+    }
+
+    /**
+     * Returns true if any tile is equal to the maximum valid value.
+     * Maximum valid value is given by MAX_PIECE. Note that
+     * given a Tile object t, we get its value with t.value().
+     */
+    public static boolean maxTileExists(Board b) {
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                Tile t = b.tile(i, j);
+                if (t != null && t.value() == MAX_PIECE) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** Returns true if at least one space on the Board is empty.
+     *  Empty spaces are stored as null.
+     *  有空就返回true，没有空就返回false
+     * */
+    public static boolean emptySpaceExists(Board b) {
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                if (b.tile(i, j) == null) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns true if there are any valid moves on the board.
+     * There are two ways that there can be valid moves:
+     * 1. There is at least one empty space on the board.
+     * 2. There are two adjacent tiles with the same value.
+     */
+    public static boolean atLeastOneMoveExists(Board b) {
+        if (emptySpaceExists(b)) {
+            return true;
+        }
+        // 妙啊，看别人的思路，还可以bfs，只要有相同的就返回true
+        // 横向下比较
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 3; j++) {
+                Tile t1 = b.tile(i, j);
+                Tile t2 = b.tile(i, j + 1);
+                if (t1.value() == t2.value()) {
+                    return true;
+                }
+            }
+        }
+        // 纵向右比较
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 4; j++) {
+                Tile t1 = b.tile(i, j);
+                Tile t2 = b.tile(i + 1, j);
+                if (t1.value() == t2.value()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
 
     /** Return true iff the game is over (there are no moves, or
      *  there is a tile with value 2048 on the board). */
@@ -108,12 +187,9 @@ public class Model extends Observable {
      *    and the trailing tile does not.
      * */
     public boolean tilt(Side side) {
-        boolean changed;
-        changed = false;
+        boolean changed = false;
 
-        // TODO: Modify this.board (and perhaps this.score) to account
-        // for the tilt to the Side SIDE. If the board changed, set the
-        // changed local variable to true.
+        board.setViewingPerspective(side);
 
         // 纵向向右遍历棋盘
         for (int col = 0; col < board.size(); col++) {
@@ -123,6 +199,7 @@ public class Model extends Observable {
             boolean merge = true;
             // 前一个tile
             Tile prev = null;
+            int prevRow = 0;
             // 横向向下遍历棋盘
             for (int row = board.size() - 1; row >= 0; row--) {
                 // 获取当前位置的tile
@@ -133,21 +210,29 @@ public class Model extends Observable {
                 // 如果前一个tile为空，说明当前tile是第一个tile，直接移动到top
                 if (prev == null) {
                     // 移动到top
-                    board.move(col, top, tile);
+                    if (board.move(col, top, tile)) {
+                        changed = true;
+                    }
+                    if (top != row) {
+                        changed = true;
+                    }
                     // 更新prev
                     prev = board.tile(col, top);
+                    prevRow = top;
                     top--;
                 } else {
                     // 前一个tile不为空，考虑能否合并
                     if (tile.value() == prev.value() && merge) {
-                        board.move(col, prev.row(), tile);
+                        board.move(col, prevRow, tile);
 
                         // 更新score
                         score += tile.value() * 2;
                         // 合并后不能再合并
                         merge = false;
                         // 更新prev
-                        prev = board.tile(col, prev.row());
+                        prev = board.tile(col, prevRow);
+                        prevRow = top;
+                        changed = true;
                     } else {
                         // 不能合并，直接移动到top
                         board.move(col, top, tile);
@@ -156,97 +241,16 @@ public class Model extends Observable {
                         // 更新prev
                         prev = board.tile(col, top);
                         top--;
+                        changed = true;
                     }
                 }
             }
         }
+        board.setViewingPerspective(Side.NORTH);
 
-        changed = true;
         checkGameOver();
-        if (changed) {
-            setChanged();
-        }
         return changed;
     }
-
-    /** Checks if the game is over and sets the gameOver variable
-     *  appropriately.
-     */
-    private void checkGameOver() {
-        gameOver = checkGameOver(board);
-    }
-
-    /** Determine whether game is over. */
-    private static boolean checkGameOver(Board b) {
-        return maxTileExists(b) || !atLeastOneMoveExists(b);
-    }
-
-    /** Returns true if at least one space on the Board is empty.
-     *  Empty spaces are stored as null.
-     *  有空就返回true，没有空就返回false
-     * */
-    public static boolean emptySpaceExists(Board b) {
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 4; j++) {
-                if (b.tile(i, j) == null) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Returns true if any tile is equal to the maximum valid value.
-     * Maximum valid value is given by MAX_PIECE. Note that
-     * given a Tile object t, we get its value with t.value().
-     */
-    public static boolean maxTileExists(Board b) {
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 4; j++) {
-                Tile t = b.tile(i, j);
-                if (t != null && t.value() == MAX_PIECE) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Returns true if there are any valid moves on the board.
-     * There are two ways that there can be valid moves:
-     * 1. There is at least one empty space on the board.
-     * 2. There are two adjacent tiles with the same value.
-     */
-    public static boolean atLeastOneMoveExists(Board b) {
-        if (emptySpaceExists(b)) {
-            return true;
-        }
-        // 妙啊，看别人的思路，还可以bfs，只要有相同的就返回true
-        // 横向下比较
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 3; j++) {
-                Tile t1 = b.tile(i, j);
-                Tile t2 = b.tile(i, j + 1);
-                if (t1.value() == t2.value()) {
-                    return true;
-                }
-            }
-        }
-        // 纵向右比较
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 4; j++) {
-                Tile t1 = b.tile(i, j);
-                Tile t2 = b.tile(i + 1, j);
-                if (t1.value() == t2.value()) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
 
     @Override
      /** Returns the model as a string, used for debugging. */
