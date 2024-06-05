@@ -5,7 +5,7 @@ import java.util.Observable;
 
 
 /** The state of a game of 2048.
- *  @author TODO: YOUR NAME HERE
+ *  @author Kiro
  */
 public class Model extends Observable {
     /** Current contents of the board. */
@@ -20,13 +20,14 @@ public class Model extends Observable {
     /* Coordinate System: column C, row R of the board (where row 0,
      * column 0 is the lower-left corner of the board) will correspond
      * to board.tile(c, r).  Be careful! It works like (x, y) coordinates.
+     * 这么一说清晰多了，以列行而不是行列，这样就和坐标系x，y一致了，倒也方便
      */
 
     /** Largest piece value. */
     public static final int MAX_PIECE = 2048;
 
     /** A new 2048 game on a board of size SIZE with no pieces
-     *  and score 0. */
+     *  and score 0.有点懵，棋盘大小应该固定不变才对吧，那为什么每次要传参呢？ */
     public Model(int size) {
         board = new Board(size);
         score = maxScore = 0;
@@ -114,6 +115,53 @@ public class Model extends Observable {
         // for the tilt to the Side SIDE. If the board changed, set the
         // changed local variable to true.
 
+        // 纵向向右遍历棋盘
+        for (int col = 0; col < board.size(); col++) {
+            // 目前可移动的最高处
+            int top = 3;
+            // prev是否可以被合并
+            boolean merge = true;
+            // 前一个tile
+            Tile prev = null;
+            // 横向向下遍历棋盘
+            for (int row = board.size() - 1; row >= 0; row--) {
+                // 获取当前位置的tile
+                Tile tile = board.tile(col, row);
+                if (tile == null) {
+                    continue;
+                }
+                // 如果前一个tile为空，说明当前tile是第一个tile，直接移动到top
+                if (prev == null) {
+                    // 移动到top
+                    board.move(col, top, tile);
+                    // 更新prev
+                    prev = board.tile(col, top);
+                    top--;
+                } else {
+                    // 前一个tile不为空，考虑能否合并
+                    if (tile.value() == prev.value() && merge) {
+                        board.move(col, prev.row(), tile);
+
+                        // 更新score
+                        score += tile.value() * 2;
+                        // 合并后不能再合并
+                        merge = false;
+                        // 更新prev
+                        prev = board.tile(col, prev.row());
+                    } else {
+                        // 不能合并，直接移动到top
+                        board.move(col, top, tile);
+                        // 未合并可以被后续合并
+                        merge = true;
+                        // 更新prev
+                        prev = board.tile(col, top);
+                        top--;
+                    }
+                }
+            }
+        }
+
+        changed = true;
         checkGameOver();
         if (changed) {
             setChanged();
@@ -138,11 +186,9 @@ public class Model extends Observable {
      *  有空就返回true，没有空就返回false
      * */
     public static boolean emptySpaceExists(Board b) {
-        // TODO: Fill in this function.——OK
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                Tile t = b.tile(i, j);
-                if (t == null) {
+                if (b.tile(i, j) == null) {
                     return true;
                 }
             }
@@ -156,7 +202,6 @@ public class Model extends Observable {
      * given a Tile object t, we get its value with t.value().
      */
     public static boolean maxTileExists(Board b) {
-        // TODO: Fill in this function.——OK
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
                 Tile t = b.tile(i, j);
@@ -175,10 +220,10 @@ public class Model extends Observable {
      * 2. There are two adjacent tiles with the same value.
      */
     public static boolean atLeastOneMoveExists(Board b) {
-        // TODO: Fill in this function.
         if (emptySpaceExists(b)) {
             return true;
         }
+        // 妙啊，看别人的思路，还可以bfs，只要有相同的就返回true
         // 横向下比较
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 3; j++) {

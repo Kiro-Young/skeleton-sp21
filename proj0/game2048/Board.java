@@ -86,18 +86,25 @@ public class Board implements Iterable<Tile> {
      * Returns whether or not this move is a merge.
      * */
     public boolean move(int col, int row, Tile tile) {
-        int pcol = viewPerspective.col(col, row, size()),
-                prow = viewPerspective.row(col, row, size());
+        // 先计算出目标位置在当前视角下的实际坐标
+        int pcol = viewPerspective.col(col, row, size());
+        int prow = viewPerspective.row(col, row, size());
+        // 如果目标坐标和当前坐标相同，返回false，说明tile没有移动、没有合并
         if (tile.col() == pcol && tile.row() == prow) {
             return false;
         }
+        // 取目标位置的tile对象tile1
         Tile tile1 = vtile(col, row, viewPerspective);
+        // 将当前位置的tile对象置为null
         values[tile.col()][tile.row()] = null;
 
+        // 如果目标位置没有tile对象，将tile对象移动到目标位置
         if (tile1 == null) {
             values[pcol][prow] = tile.move(pcol, prow);
             return false;
         } else {
+            // 如果目标位置有tile对象，将tile对象合并到目标位置
+            // 要提前判断目标位置的tile对象是否可以合并
             values[pcol][prow] = tile.merge(pcol, prow, tile1);
             return true;
         }
